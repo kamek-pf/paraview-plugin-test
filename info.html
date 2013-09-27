@@ -1,0 +1,287 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/Math/DTD/mathml2/xhtml-math11-f.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="fr-FR" lang="fr"><head profile="http://dublincore.org/documents/dcq-html/">
+  <title>TP2 de Visualisation Scientifique - Extension de ParaView par développement de nouveaux filtres</title><link href="info_fichiers/bjstyle1.css" rel="stylesheet" type="text/css">
+  <link rel="schema.DC" href="http://purl.org/dc/elements/1.1/">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="DC.date" content="2004-09-25T11:48:15">
+  <meta name="DC.language" content="fr-FR">
+  <link href="info_fichiers/htmlize_style.css" rel="stylesheet" type="text/css"></head>
+<body style="direction: ltr;">
+
+<h1>TP2 de Visualisation Scientifique - Extension de ParaView</h1>
+
+<p class="author"></p><center>Wilfrid Lefer</center><p></p>
+
+<h2>Méthodologie</h2>
+<p>L'objectif de ce travail est de vous faire acquérir les compétences 
+nécessaires au développement de nouveaux outils de visualisation 
+intégrés dans le logiciel ParaView. Lorsqu'un traitement n'est pas 
+disponible dans l'interface ParaView, il existe typiquement 3 approches 
+qui peuvent être adoptées :
+    </p><ul><li>+ ce traitement est disponible dans la labrairie VTK : 
+ParaView étant bâti au dessus de VTK, il sera alors possible d'y 
+intégrer la classe VTK, en utilisant le mécanisme qui est décrit 
+ci-dessous.</li>
+        <li>+ on écrit le code réalisant le traitement en langage Python
+ et il devient alors disponible via l'interface Python, qui permet 
+d'exécuter ParaView en mode batch. Cette approche a toutefois 2 
+inconvénients :
+            <ul><li>- elle est peu efficace car Python est un langage interprété et donc pas adapté à des traitements lourds.</li>
+                <li>- elle ne permettra pas de disposer du nouveau traitement en interactif, c'est-à-dire dans l'interface ParaView.</li>
+            </ul>
+        </li><li>+ on développe une nouvelle classe VTK, que l'on intègre dans l'interface ParaView.
+    </li></ul>
+Le travail qui vous est proposé ici concerne la dernière approche.
+<p>La méthode pour développer un nouveau filtre ParaView peut être 
+décomposée en plusieurs étapes qui seront réalisées dans cet ordre :
+    </p><ul><li>+ identifier, dans la hiérarchie de classes VTK (<em>paraview.org</em>),
+ la bonne place de la nouvelle classe, autrement dit de quelle classe la
+ nouvelle classe doit hériter. Cela implique une bonne compréhension de 
+l'organisation des classes VTK et aussi des consignes de développement 
+communiquées par ses concepteurs. Vous serez naturellement aidés pour 
+cela.</li>
+        <li>+ si possible - c'est en général le cas - trouver une classe
+ VTK qui se situe au même endroit de la hiérarchie, et parmi celles qui 
+se présentent, choisir celle qui semble la plus similaire à la classe 
+qui sera développée.</li>
+        <li>+ créer un répertoire dédié à la nouvelle classe, par exemple le nom de la classe sans le préfixe <em>vtk</em>, et aller dans ce répertoire.</li>
+        <li>+ recopier la classe VTK (vous les trouverez ici : <em>/usr/local/src/ParaView-3.14.1-Source/VTK</em>),
+ la renommer avec le nom de la nouvelle classe, et changer partout dans 
+le code la nom de la classe par le nom de la nouvelle classe : quelque 
+chose comme <pre>    sed s/&lt;ancien nom&gt;/&lt;nouveau nom&gt;/g &lt;ancien nom&gt;.h &gt; &lt;nouveau nom&gt;.h</pre> puis <pre>    sed s/&lt;ancien nom&gt;/&lt;nouveau nom&gt;/g &lt;ancien nom&gt;.cxx &gt; &lt;nouveau nom&gt;.cxx</pre> devrait faire l'affaire.</li>
+        <li>+ dans le fichier .h, modifier le début de la déclaration de l'entête de classe ainsi : <pre>class VTK_EXPORT &lt;nom de la classe&gt; ...</pre></li>
+        <li>+ créer 1 sous-répertoire appelé <em>PV</em> par exemple.</li>
+        <li>+ créer un fichier nommé <em>CMakeLists.txt</em> qui contiendra le texte suivant :
+            <pre>
+    FIND_PACKAGE(ParaView REQUIRED)
+      INCLUDE(${PARAVIEW_USE_FILE})
+      ADD_PARAVIEW_PLUGIN(&lt;nouveau nom sans prefixe vtk&gt; "1.0"
+      SERVER_MANAGER_XML &lt;nouveau nom sans prefixe vtk&gt;.xml
+      SERVER_MANAGER_SOURCES &lt;nouveau nom&gt;.cxx)
+      INCLUDE_DIRECTORIES(&lt;racine de la distribution ParaView&gt;/VTK)
+
+            </pre></li>
+        <li>+ créer un fichier appelé <em>&lt;nouveau nom sans prefixe vtk&gt;.xml</em> qui contient le texte suivant :
+            <pre>
+    &lt;ServerManagerConfiguration&gt;
+      &lt;ProxyGroup name="filters"&gt;
+        &lt;SourceProxy name="BumpMap" class="vtkBumpMap" label="Bump Mapper"&gt;
+        &lt;Documentation long_help="This filter implements a bump mapping effect on the geometry by modifying the point normals."
+                       short_help="Modify surface normals in order to create a bump mapping effect."&gt;
+                       The BumpMap filter modifies the point normals so as to bump map the geometry, not only as a rendering effect.
+        &lt;/Documentation&gt;
+    
+        &lt;InputProperty
+              name="Input"
+              command="SetInputConnection"&gt;
+          &lt;ProxyGroupDomain name="groups"&gt;
+            &lt;Group name="sources"/&gt;
+            &lt;Group name="filters"/&gt;
+          &lt;/ProxyGroupDomain&gt;
+          &lt;DataTypeDomain name="input_type"&gt;
+            &lt;DataType value="vtkDataSet"/&gt;
+          &lt;/DataTypeDomain&gt;
+          &lt;InputArrayDomain name="input_array1" attribute_type="point" number_of_components="1"/&gt;
+          &lt;InputArrayDomain name="input_array2" attribute_type="point" number_of_components="3"/&gt;
+          &lt;Documentation&gt;
+            This property specifies the input to the BumpMap filter. This is the dataset to which the bump map effect will be applied.
+          &lt;/Documentation&gt;
+        &lt;/InputProperty&gt;
+
+        &lt;DoubleVectorProperty
+            name="SetScaleFactor"
+            command="SetScaleFactor"
+            number_of_elements="1"
+            default_values="1.0" &gt;
+          &lt;Documentation&gt;
+	    The value of this property will be used as a multiplier for scaling the perturbation of the normals.
+          &lt;/Documentation&gt;
+        &lt;/DoubleVectorProperty&gt;
+
+        &lt;Hints&gt;
+          &lt;Visibility replace_input="2"/&gt;
+        &lt;/Hints&gt;
+
+        &lt;/SourceProxy&gt;
+      &lt;/ProxyGroup&gt;
+    &lt;/ServerManagerConfiguration&gt;
+
+            </pre></li>
+        <li>+ copier le fichier <em>vtkLocalConfigure.h.</em> qui se trouve dans la distribution ParaView : <pre>    cp /usr/local/src/ParaView-3.14.1-Source/VTK/Examples/Build/vtkLocal/vtkLocalConfigure.h.in .</pre></li>
+        <li>+ aller dans le répertoire PV et générer le Makefile pour la nouvelle librairie en tapant : <pre>    cmake ..</pre></li>
+        <li>+ compiler la nouvelle librairie en tapant : <em>make</em> : sauf erreur inattendue une librairie a été créée dans le répertoire courant.</li>
+        <li>+ il suffit désormais d'indiquer à ParaView qu'il doit se lier avec la librairie en question : <pre>    export PV_PLUGIN_PATH=&lt;le répertoire PV&gt;</pre></li>
+    </ul>
+La prochaine fois que ParaView sera lancé, le nouveau filtre apparaîtra dans le menu <em>Filters</em>.<p>
+Evidemment ce filtre implémente alors exactement les mêmes 
+fonctionnalités que celui qui a servi de modèle. Pour modifier ce 
+comportement il faudra alors procéder comme suit :
+</p><ul><li>+ réfléchir au préalable afin d'avoir en tête les détails de
+ l'interface du plugin, à savoir les paramètres qui seront proposés à 
+l'utilisateur dans la fenêtre <em>Object Inspector</em>,</li>
+    <li>+ supprimer dans les fichiers sources tout ce qui ne sera pas 
+utilisé, en pensant à procéder intelligemment, par exemple en utilisant 
+déclaration et implémentation liés à un paramètre pour, via un 
+renommage, les réutiliser pour un paramètre de même type qui devra 
+figurer dans l'interface du nouveau plugin,</li>
+    <li>+ supprimer du constructeur de la classe et de la méthode <em>RequestData()</em> ce qui n'a plus lieu d'exister et là encore réutiliser ce qui peut l'être.</li>
+</ul>
+En principe cela devrait pouvoir recompiler, pour un plugin qui ne fait rien pour l'instant.<br>
+Il reste maintenant à écrire le code d'implémentation du plugin proprement dit dans la méthode <em>RequestData()</em>.
+ Cette méthode est réexécutée chaque fois que les données d'entrée du 
+plugin ou un de ses paramètres ont été modifiés, ce mécanisme étant 
+naturellement supporté par les classes dont hérite le plugin, il n'est 
+donc pas à gérer.<br>
+Les premières lignes de cette méthode sont toujours les mêmes, elles 
+permettent de récupérer les données en entrées mais aussi les données en
+ sortie, qui sont automatiquement initialisées par les classes mères :
+<pre>  // get the info objects
+  vtkInformation *inInfo = inputVector[0]-&gt;GetInformationObject(0);
+  vtkInformation *outInfo = outputVector-&gt;GetInformationObject(0);
+</pre>
+Le type renvoyé étant générique, il sera en général nécessaire de le 
+changer et il faut bien sûr que ce forçage de type soit valide, on s'en 
+assurera en écrivant ceci :
+<pre>  // get the input and output
+  vtkPolyData *input = vtkPolyData::SafeDownCast(
+    inInfo-&gt;Get(vtkDataObject::DATA_OBJECT()));
+  vtkPolyData *output = vtkPolyData::SafeDownCast(
+    outInfo-&gt;Get(vtkDataObject::DATA_OBJECT()));
+</pre>
+L'exemple qui est donné a pour objectif de travailler sur des données de
+ type mesh et s'adresse donc à un plugin qui prendrait en entrée un mesh
+ et fournirait en résultat une autre mesh ou la même mesh modifiée. Ceci
+ est à adapter en fonction des caractéristiques du plugin.<br>
+Les lihgnes suivantes doivent ensuite figurer, dont l'objectif est de s'assurer qu'il y a bien des données en entrée :
+<pre>  // Null input check
+  if (!input)
+    return 0;
+</pre>
+Afin de récupérer les données associées aux points - le même principe 
+fonctionne pour les données associées aux cellules - pour les données en
+ entrée comme en sortie, on écrira :
+<pre>  // Get the point data
+  vtkPointData *inputPD = input-&gt;GetPointData();
+  vtkPointData *outputPD = output-&gt;GetPointData();
+</pre>
+On peut ensuite vouloir vérifier que le jeu de données comporte bien un champ de données associé d'un nom particulier :
+<pre>  // Check we have a scalar point data with the required name
+  if (input-&gt;GetPointData()-&gt;SetActiveAttribute("IntegrationTime", 0) == -1) {
+    vtkErrorMacro("No point scalar field named \"IntegrationTime\"");
+    return 0;
+  }
+</pre>
+Ou encore on peut vouloir s'assurer qu'il existe bien un champ de données d'un type requis :
+<pre>  // Check we have lines as input
+  vtkCellArray *streams = input-&gt;GetLines();
+  if (streams == NULL) {
+    vtkErrorMacro(&lt;&lt; "Invalid dataset: no lines");
+    return 0;
+  }
+</pre>
+On peut récupérer la liste des valeurs d'un champ de données associé ainsi :
+<pre>  // Get IntegrationTime array
+  vtkDoubleArray *IT = vtkDoubleArray::SafeDownCast(inputPD-&gt;GetScalars());
+</pre>
+Il est courant de vouloir recopier l'ensemble des champs associés aux 
+données en entrée sur la sortie et on peut réaliser cela avec le code 
+suivant :
+<pre>  // pass all associated data to output dataset
+  output-&gt;CopyStructure(this-&gt;input);
+  output-&gt;GetPointData()-&gt;PassData(this-&gt;input-&gt;GetPointData());
+  output-&gt;GetFieldData()-&gt;PassData(this-&gt;input-&gt;GetFieldData());
+</pre>
+Attention toutefois : VTK fait dans ce cas une copie économique - méthode <em>ShallowCopy()</em>
+ - autrement dit il ne duplique que la référence au tableau de données 
+afin de limiter l'occupation mémoire du pipeline. Si on veut recopier un
+ champ pour ensuite le modifier sur la sortie, il faut procéder ainsi 
+(pour copier les normales dans cet exemple) :
+<pre>  vtkDataArray *inNormals = input-&gt;GetPointData()-&gt;GetNormals()
+  vtkDataArray *normals = inNormals-&gt;NewInstance();
+  normals-&gt;DeepCopy(inNormals);
+</pre>
+Enfin cette fonction et celles qui lui sont associées est intéressante, 
+il est vivement conseillé de lire la documentation VTK à son sujet :
+<pre>  outputPD-&gt;InterpolateAllocate(inputPD);
+</pre>
+
+<h2>Travail à réaliser</h2>
+Vous allez créer une nouvelle classe afin d'animer des particules le 
+long de streamlines calculées au préalable, ceci afin de visualiser, en 
+plus de la trajectoire de particules sans masse, la direction et la 
+vitesse de déplacement.
+<p>L'idée est de développer une classe qui prendra en entrée un ensemble
+ de streamlines, qui auront été préalablement calculées, et produira 
+comme résultat un point par streamline. Dans un premier temps, cette 
+classe admettra un seul paramètre : l'instant courant. La position de 
+chaque particule sur sa streamline de référence correspondra sera 
+fonction de l'instant courant.
+<!--
+<p>Afin d'étendre ParaView, il est nécessaire de disposer d'une version recompilée localement à partir du code source. Une telle version est disponible mais ce n'est pas celle que vous obtiendrez par défaut, aussi ajoutez dans le fichier <em>.bashrc</em> qui se trouve sous votre racine les lignes suivantes :
+   <ul><pre>    export ParaView_DIR=/home/r/liuppa/lefer/ParaView-3.6.1_BUILD/bin</pre>
+       <pre>    export PATH="$ParaView_DIR:/home/r/liuppa/lefer/CMake-2.8.0/cmake-2.8.0-rc7-Linux-i386/bin:$PATH"</pre>
+   </ul>
+-->
+</p><p>Maintenant vous pouvez appliquer la méthode expliquée plus haut afin d'intégrer une nouvelle classe dans ParaView.
+</p><p>Puis modifiez le code de la classe afin qu'elle réalise ce que vous recherchez.
+</p><p>Enfin il restera à ajouter les éléments d'interface, afin de 
+pouvoir modifier la valeur du temps d'intégration. L'interface est 
+décrite dans le fichier XML. Attention : après modification de celui-ci,
+ il est nécessaire de reconstruire la Makefile, en invoquant <em>cmake</em> !
+
+</p><h2>Quelques explications utiles</h2>
+
+Vous avez vu en cours en quoi consiste le calcul d'une streamline : 
+l'intégration dans le temps de la position d'une particule sans masse 
+qui serait lâchée dans le fluide à l'instant 0. Les méthodes 
+d'appoximation utilisées, comme Runge-Kutta, incrémente donc le temps et
+ calcule une approximation de la position de la particule, l'incrément 
+temporel étant en général variable afin de minimiser l'erreur commise. 
+Une streamline est ainsi définie par une suite de points correspondant 
+aux instants successifs par lesquels est passé le processus 
+d'intégration.
+<p>Il peut être utile de connaître cette information afin de savoir à 
+quelle position exacte se situait la particule à un instant donné, ou à 
+l'inverse quand la particule a-t-elle atteint une position donnée. Aussi
+ VTK/ParaView stocke-t-il cette information dans un champ scalaire nommé
+ <em>IntegrationTime</em>, qui pour chaque sommet contient l'instant où 
+la particule a atteint ce sommet. Ainsi vous pourrez déterminer la 
+position de la particule correspondant au paramètre temps de votre 
+nouvelle classe.
+
+</p><h2>Pour ceux qui vondront en faire plus</h2>
+
+Deux idées pour améliorer la classe :
+  <ul><li>+ facile : ajouter un nouveau paramètre : le nombre de sommets
+ par streamline, et répartir les sommets sur chaque streamline à 
+distance temporelle égale, en faisant coïncider l'un d'eux avec 
+l'instant spécifié en paramètre. Intérêt : mieux apprécier la forme des 
+longues streamlines.</li>
+      <li>+ nettement plus difficile : interpoler tous les champs associés (<em>PointData</em>) aux positions des particules et les associer en tant que <em>PointData</em> des sommets. Intérêt : par exemple colorier les particules en fonction de leur température.</li>
+  </ul>
+
+<h2>Installation de ParaView chez vous</h2>
+Si vous souhaitez travailler sur votre propre machine, il vous faut 
+installer une version de développement de ParaView, la version binaire 
+par défaut ne permettant pas d'ajouter des plugins.<br>
+Il y a en fait 2 solutions :
+<ul><li>+ soit vous téléchargez les sources et compilez l'ensemble de 
+l'application : la difficulté réside dans la sélection des bonnes 
+options à partir de <em>cmake</em>, ce qui peut demander un peu d'expérience mais on y arrive.</li>
+    <li>+ depuis la version 3.8 il existe des binaires pour le 
+développement : il suffit alors de décompresser l'archive et de modifier
+ les choses suivantes :
+        <ul><li>- au début du fichier <em>CMakeLists.txt</em> de votre plugin, ajouter la ligne :
+<pre>              SET(ParaView_DIR &lt;chemin menant au répertoire contenant le fichier ParaViewConfig.cmake&gt;)</pre></li>
+            <li>- dans le shell :
+<pre>              export LD_LIBRARY_PATH=&lt;<em>chemin menant au répertoire contenant le fichier ParaViewConfig.cmake</em>&gt;:$LD_LIBRARY_PATH</pre></li>
+            <li>- comme il faudra disposer des fichiers headers de VTK, 
+télécharger la distribution source (avec le même numéro de release 
+évidemment) et décompresser uniquement le sous-répertoire <em>VTK</em>, et changer le chemin dans le fichier <em>CMakeLists.txt</em> en conséquences.</li>
+        </ul></li>
+</ul><p>
+Les détails pour installer la version binaire de développement : <a href="http://www.paraview.org/Wiki/ParaView:Plugin_Deployment_with_Development_Installs">http://www.paraview.org/Wiki/ParaView:Plugin_Deployment_with_Development_Installs</a> <br>
+Et la source d'informations toutes catégories sur ParaView : <a href="http://www.paraview.org/Wiki">http://www.paraview.org/Wiki</a> </p><p>
+
+
+</p></body></html>
