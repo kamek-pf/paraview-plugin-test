@@ -1,0 +1,58 @@
+<html>
+    <head>
+        <title>Bump Mapper</title>
+        <meta name="proxy_name" contents="BumpMap.BumpMap"/>
+        <meta name="filename" contents="BumpMap.BumpMap.html"/>
+    </head>
+    <body>
+        <h2>Bump Mapper (BumpMap)</h2>
+        <i>
+            <p>This filter implements a bump mapping effect on the geometry by modifying the point normals.</p>
+        </i>
+        <div class="description">
+				The BumpMap filter modifies the point normals so as to bump map the geometry, not only as a rendering effect.
+			</div>
+        <table width="97%" border="2px">
+            <tr bgcolor="#9acd32">
+                <th>Property</th>
+                <th width="60%">Description</th>
+                <th width="5%">Default(s)</th>
+                <th width="20%">Restrictions</th>
+            </tr>
+            <tr>
+                <th>Input</th>
+                <td>
+					This property specifies the input to the BumpMap filter. This is the dataset to which the bump map effect will be applied.
+				</td>
+                <td>
+                    <span/>
+                </td>
+                <td>
+                    <p>Accepts input of following types:<ul>
+                            <li>vtkDataSet</li>
+                        </ul>
+                    </p>
+                    <p>
+      The dataset much contain a field array (point)
+      
+        with 1 component(s).
+      </p>
+                    <p>
+      The dataset much contain a field array (point)
+      
+        with 3 component(s).
+      </p>
+                </td>
+            </tr>
+            <tr>
+                <th>SetScaleFactor</th>
+                <td>
+					The value of this property will be used as a multiplier for scaling the perturbation of the normals.
+				</td>
+                <td>1.0<span/>
+                </td>
+                <td/>
+            </tr>
+        </table>
+    </body>
+</html>
