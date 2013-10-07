@@ -1,0 +1,2 @@
+export LD_LIBRARY_PATH=/usr/local/src/ParaView-3.14.1-Source:$LD_LIBRARY_PATH
+export ParaView_DIR=/usr/local/src/Paraview314
