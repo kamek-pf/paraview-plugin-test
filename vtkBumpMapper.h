@@ -16,7 +16,7 @@
 // .SECTION Description
 // vtkBumpMapper is a filter that takes polygonal data as input and
 // generates polygonal data as output. vtkBumpMapper can merge duplicate
-// points (within specified tolerance and if enabled), eliminate points
+// points (within specified ScaleFactor and if enabled), eliminate points
 // that are not used, and if enabled, transform degenerate cells into
 // appropriate forms (for example, a triangle is converted into a line
 // if two points of triangle are merged).
@@ -33,7 +33,7 @@
 // Strp with 1 points -> Vert (if ConvertStripsToPolys && ConvertPolysToLines
 //   && ConvertLinesToPoints)
 //
-// If tolerance is specified precisely=0.0, then vtkBumpMapper will use
+// If ScaleFactor is specified precisely=0.0, then vtkBumpMapper will use
 // the vtkMergePoints object to merge points (which is faster). Otherwise the
 // slower vtkIncrementalPointLocator is used.  Before inserting points into the point
 // locator, this class calls a function OperateOnPoint which can be used (in
@@ -46,7 +46,7 @@
 
 // .SECTION Caveats
 // Merging points can alter topology, including introducing non-manifold
-// forms. The tolerance should be chosen carefully to avoid these problems.
+// forms. The ScaleFactor should be chosen carefully to avoid these problems.
 // Subclasses should handle OperateOnBounds as well as OperateOnPoint
 // to ensure that the locator is correctly initialized (i.e. all modified
 // points must lie inside modified bounds).
@@ -69,10 +69,10 @@ public:
   vtkTypeMacro(vtkBumpMapper,vtkPolyDataAlgorithm);
 
   // Description:
-  // Specify tolerance in terms of fraction of bounding box length.
+  // Specify ScaleFactor in terms of fraction of bounding box length.
   // Default is 0.0.
-  vtkSetClampMacro(scaleFactor,double,0.0,1.0);
-  vtkGetMacro(scaleFactor,double);
+  vtkSetClampMacro(ScaleFactor,double,0.0,1.0);
+  vtkGetMacro(ScaleFactor,double);
 
   // Description:
   // Set/Get a spatial locator for speeding the search process. By
@@ -88,15 +88,32 @@ public:
   // Release locator
   void ReleaseLocator() { this->SetLocator(NULL); }
 
+
+
+
+  // This filter is difficult to stream.
+  // To get invariant results, the whole input must be processed at once.
+  // This flag allows the user to select whether strict piece invariance
+  // is required.  By default it is on.  When off, the filter can stream,
+  // but results may change.
+  //vtkSetMacro(PieceInvariant, int);
+  //vtkGetMacro(PieceInvariant, int);
+  //vtkBooleanMacro(PieceInvariant, int);
+
 protected:
   vtkBumpMapper();
  ~vtkBumpMapper();
 
+  // Usual data generation method
   virtual int RequestData(vtkInformation *, vtkInformationVector **, vtkInformationVector *);
-  
-  vtkIncrementalPointLocator *Locator;
-  double scaleFactor;
 
+
+
+  double ScaleFactor;
+
+  vtkIncrementalPointLocator *Locator;
+
+  //int PieceInvariant;
 private:
   vtkBumpMapper(const vtkBumpMapper&);  // Not implemented.
   void operator=(const vtkBumpMapper&);  // Not implemented.

@@ -1,5 +1,0 @@
-Exports to put in your .bashrc : 
-
-export LD_LIBRARY_PATH=/usr/local/src/ParaView-3.14.1-Source:$LD_LIBRARY_PATH
-export ParaView_DIR=/usr/local/src/Paraview314
-export PV_PLUGIN_PATH=/import/etud/<YourNum>/YourUserName/paraview-plugin-test/src/PV

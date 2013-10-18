@@ -1,0 +1,42 @@
+<ServerManagerConfiguration>
+      <ProxyGroup name="filters">
+        <SourceProxy name="BumpMap" class="vtkBumpMapper" label="Bump Mapper">
+        <Documentation long_help="This filter implements a bump mapping effect on the geometry by modifying the point normals."
+                       short_help="Modify surface normals in order to create a bump mapping effect.">
+                       The BumpMap filter modifies the point normals so as to bump map the geometry, not only as a rendering effect.
+        </Documentation>
+    
+        <InputProperty
+              name="Input"
+              command="SetInputConnection">
+          <ProxyGroupDomain name="groups">
+            <Group name="sources"/>
+            <Group name="filters"/>
+          </ProxyGroupDomain>
+          <DataTypeDomain name="input_type">
+            <DataType value="vtkPolyData"/>
+          </DataTypeDomain>
+
+          <InputArrayDomain name="input_array1" attribute_type="point" number_of_components="3" optional="1"/>
+          <Documentation>
+            This property specifies the input to the BumpMap filter. This is the dataset to which the bump map effect will be applied.
+          </Documentation>
+        </InputProperty>
+
+        <DoubleVectorProperty
+            name="SetScaleFactor"
+            command="SetScaleFactor"
+            number_of_elements="1"
+            default_values="1.0" >
+          <Documentation>
+	    The value of this property will be used as a multiplier for scaling the perturbation of the normals.
+          </Documentation>
+        </DoubleVectorProperty>
+
+        <Hints>
+          <Visibility replace_input="2"/>
+        </Hints>
+
+        </SourceProxy>
+      </ProxyGroup>
+    </ServerManagerConfiguration>
